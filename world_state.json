@@ -1,4 +1,68 @@
 {
   "version": 1,
-  "objects": []
+  "objects": [
+    {
+      "id": "building-1",
+      "type": "building",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 4,
+        "y": 6,
+        "z": 4
+      },
+      "properties": [
+        {
+          "key": "style",
+          "value": "default"
+        }
+      ],
+      "children": []
+    },
+    {
+      "id": "building-2",
+      "type": "building",
+      "position": {
+        "x": 6,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 4,
+        "y": 6,
+        "z": 4
+      },
+      "properties": [
+        {
+          "key": "style",
+          "value": "default"
+        }
+      ],
+      "children": []
+    },
+    {
+      "id": "building-3",
+      "type": "building",
+      "position": {
+        "x": 12,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 4,
+        "y": 6,
+        "z": 4
+      },
+      "properties": [
+        {
+          "key": "style",
+          "value": "default"
+        }
+      ],
+      "children": []
+    }
+  ]
 }
