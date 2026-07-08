@@ -19,6 +19,30 @@ const MAX_RETRIES = 3;
  *
  * Usage: node run-command.mjs "Build a small city block with 3 buildings"
  */
+async function run(cmd, args, cwd) {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  return promisify(execFile)(cmd, args, { cwd });
+}
+
+/** Undo a failed attempt entirely (local commit + remote push) so the next retry starts from the same clean base instead of piling more changes on top. */
+async function rollbackToBaseline(cwd, baselineSha) {
+  await run("git", ["reset", "--hard", baselineSha], cwd);
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return; // nothing was pushed remotely without a token
+  const { stdout: originUrl } = await run("git", ["remote", "get-url", "origin"], cwd);
+  const cleanUrl = originUrl.trim();
+  const match = cleanUrl.match(/^https:\/\/(.+)$/);
+  if (!match) return;
+  const authedUrl = `https://x-access-token:${token}@${match[1]}`;
+  try {
+    await run("git", ["remote", "set-url", "origin", authedUrl], cwd);
+    await run("git", ["push", "--force", "origin", "HEAD"], cwd);
+  } finally {
+    await run("git", ["remote", "set-url", "origin", cleanUrl], cwd);
+  }
+}
+
 async function main() {
   const command = process.argv.slice(2).join(" ").trim();
   if (!command) {
@@ -26,15 +50,19 @@ async function main() {
     process.exit(1);
   }
 
+  const { stdout: baselineShaRaw } = await run("git", ["rev-parse", "HEAD"], PROJECT_ROOT);
+  const baselineSha = baselineShaRaw.trim();
+
   let attempt = 0;
   let lastError = null;
+  let compilerFeedback = null; // set from a failed attempt's real compiler output; passed to the agent on retry
 
   while (attempt < MAX_RETRIES) {
     attempt += 1;
     console.log(`\n=== Attempt ${attempt}/${MAX_RETRIES}: "${command}" ===`);
 
     const doc = await loadWorldState();
-    const { agent, result } = routeCommand(doc, command);
+    const { agent, result } = routeCommand(doc, command, { compilerFeedback });
     console.log(`Orchestrator -> ${agent} agent`);
     console.log(result.summary);
 
@@ -44,7 +72,7 @@ async function main() {
       if (err instanceof StructuralValidationError) {
         console.error(err.message);
         lastError = err.message;
-        continue; // retry: agent logic itself needs fixing, not a compile error
+        continue; // agent logic itself needs fixing, not a compile error -- nothing was written or pushed yet
       }
       throw err;
     }
@@ -73,13 +101,26 @@ async function main() {
     console.error(`Compile check failed: ${outcome.htmlUrl}`);
     const logText = await fetchFailureLogs({ cwd: PROJECT_ROOT, runId: outcome.runId });
     const compilerErrors = extractCompilerErrors(logText);
-    lastError = compilerErrors.join("\n") || "Unity Compile Check failed with no extractable compiler errors.";
+
+    if (compilerErrors.length === 0) {
+      // Nothing our agents could act on (e.g. missing UNITY_LICENSE, runner
+      // infra issue) -- retrying would just duplicate work for no benefit.
+      await rollbackToBaseline(PROJECT_ROOT, baselineSha);
+      throw new Error(
+        `Unity Compile Check failed with no extractable compiler errors (likely a CI/license setup issue, not a code problem). See ${outcome.htmlUrl}. Rolled back to keep world_state.json clean.`
+      );
+    }
+
+    lastError = compilerErrors.join("\n");
     console.error("Compiler errors:\n" + lastError);
-    // A real fix pass would feed `lastError` back into the responsible
-    // agent (e.g. an LLM-backed rewrite of the generated C#) before retrying.
+    compilerFeedback = lastError;
+
+    // Undo this attempt's commit/push before the responsible agent retries
+    // from a clean base with the real compiler errors as feedback.
+    await rollbackToBaseline(PROJECT_ROOT, baselineSha);
   }
 
-  throw new Error(`Gave up after ${MAX_RETRIES} attempts. Last error:\n${lastError}`);
+  throw new Error(`Gave up after ${MAX_RETRIES} attempts. Last compiler errors:\n${lastError}`);
 }
 
 main().catch((err) => {

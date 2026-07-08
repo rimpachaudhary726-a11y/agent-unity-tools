@@ -21,15 +21,20 @@ const RULES = [
 /**
  * @param {object} doc - in-memory world state document, mutated in place by the chosen agent
  * @param {string} command - raw user chat message
+ * @param {{ compilerFeedback?: string }} [options] - real compiler errors from a previous failed
+ *   attempt at this same command, for agents that generate bespoke C# to react to. Today's
+ *   Builder/Decorator/Interior/Remove agents only edit world_state.json against generic,
+ *   already-compiling MonoBehaviours, so they don't consume this yet -- it's threaded through
+ *   as the extension point for future agents that do generate per-object C#.
  * @returns {{ agent: string, result: object }}
  */
-export function routeCommand(doc, command) {
+export function routeCommand(doc, command, options = {}) {
   const rule = RULES.find((r) => r.test(command));
   if (!rule) {
     throw new Error(
       `Orchestrator could not classify command: "${command}". Expected it to mention building/tree/interior/remove.`
     );
   }
-  const result = rule.handler(doc, command);
+  const result = rule.handler(doc, command, options);
   return { agent: rule.name, result };
 }
