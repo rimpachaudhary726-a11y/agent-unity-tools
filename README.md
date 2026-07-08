@@ -32,21 +32,27 @@ This is a standalone project. It has no dependency on any other codebase.
 
 ### 1. Unity Personal license activation
 
-GitHub Actions needs a Unity license to run the Editor headlessly. This is a
-manual, one-time step tied to your own Unity ID:
+GitHub Actions needs a Unity license to run the Editor headlessly. GameCI
+retired the old "request activation file" GitHub Action, so this is now done
+with Unity Hub on your own machine (one-time, tied to your Unity ID):
 
-1. Add two repository secrets under **Settings → Secrets and variables →
-   Actions**: `UNITY_EMAIL` and `UNITY_PASSWORD` (your Unity ID credentials).
-2. Run the **"Request Unity Activation File"** workflow manually from the
-   **Actions** tab (`workflow_dispatch`).
-3. Download the `unity-activation-file` artifact it produces (a `.alf` file).
-4. Go to <https://license.unity3d.com/manual>, upload the `.alf` file, choose
-   **Unity Personal**, and download the resulting `.ulf` license file.
-5. Add the **entire contents** of the `.ulf` file as a new repository secret
-   named `UNITY_LICENSE`.
+1. Install [Unity Hub](https://unity.com/download) locally and sign in with
+   the Unity ID you want CI to use.
+2. In Unity Hub, go to **Preferences → Licenses → Add**, then choose
+   **Get a free personal license** and complete activation.
+3. Locate the generated `.ulf` license file:
+   - Windows: `C:\ProgramData\Unity\Unity_lic.ulf`
+   - Mac: `/Library/Application Support/Unity/Unity_lic.ulf`
+   - Linux: `~/.local/share/unity3d/Unity/Unity_lic.ulf`
+4. On GitHub, go to **Settings → Secrets and variables → Actions** and add
+   three repository secrets:
+   - `UNITY_LICENSE` — the entire contents of the `.ulf` file
+   - `UNITY_EMAIL` — your Unity ID email
+   - `UNITY_PASSWORD` — your Unity ID password
 
 After this, every push triggers a real compile check automatically — no
-further manual steps.
+further manual steps. GameCI does not store or transmit these values anywhere
+other than your own Actions run.
 
 ### 2. Push access
 
