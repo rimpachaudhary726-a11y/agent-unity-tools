@@ -1,0 +1,10 @@
+{
+  "name": "city-builder-agents",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Orchestrator + specialist agents that mutate world_state.json and the Unity C# project from chat commands, then validate via GitHub Actions.",
+  "scripts": {
+    "handle": "node run-command.mjs"
+  }
+}

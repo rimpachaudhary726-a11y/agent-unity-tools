@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WorldStateDocument",
+  "type": "object",
+  "required": ["version", "objects"],
+  "properties": {
+    "version": { "type": "integer" },
+    "objects": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/worldObject" }
+    }
+  },
+  "definitions": {
+    "vector3": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "propertyEntry": {
+      "type": "object",
+      "required": ["key", "value"],
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "room": {
+      "type": "object",
+      "required": ["id", "name", "position", "size"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "position": { "$ref": "#/definitions/vector3" },
+        "size": { "$ref": "#/definitions/vector3" }
+      },
+      "additionalProperties": false
+    },
+    "interior": {
+      "type": "object",
+      "required": ["rooms"],
+      "properties": {
+        "rooms": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/room" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "worldObject": {
+      "type": "object",
+      "required": ["id", "type", "position", "scale"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["building", "tree", "decoration"] },
+        "position": { "$ref": "#/definitions/vector3" },
+        "scale": { "$ref": "#/definitions/vector3" },
+        "properties": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/propertyEntry" }
+        },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/worldObject" }
+        },
+        "interior": { "$ref": "#/definitions/interior" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
