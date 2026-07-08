@@ -17,6 +17,27 @@ async function run(cmd, args, opts = {}) {
   return execFileAsync(cmd, args, { cwd: opts.cwd, env: process.env });
 }
 
+/** Push using GITHUB_TOKEN embedded in the remote URL only for the duration of the push, then restore the clean URL so the token never lingers in git config. */
+async function pushWithToken(cwd) {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    throw new Error("GITHUB_TOKEN is not set. It's required to push (and to poll Actions runs) for this repo.");
+  }
+  const { stdout: originUrl } = await run("git", ["remote", "get-url", "origin"], { cwd });
+  const cleanUrl = originUrl.trim();
+  const match = cleanUrl.match(/^https:\/\/(.+)$/);
+  if (!match) {
+    throw new Error(`Only HTTPS remotes are supported for token-based push. Got: ${cleanUrl}`);
+  }
+  const authedUrl = `https://x-access-token:${token}@${match[1]}`;
+  try {
+    await run("git", ["remote", "set-url", "origin", authedUrl], { cwd });
+    await run("git", ["push", "origin", "HEAD"], { cwd });
+  } finally {
+    await run("git", ["remote", "set-url", "origin", cleanUrl], { cwd });
+  }
+}
+
 export async function commitAndPush({ cwd, message }) {
   await run("git", ["add", "-A"], { cwd });
   const { stdout: statusOut } = await run("git", ["status", "--porcelain"], { cwd });
@@ -24,7 +45,7 @@ export async function commitAndPush({ cwd, message }) {
     return { committed: false, sha: (await run("git", ["rev-parse", "HEAD"], { cwd })).stdout.trim() };
   }
   await run("git", ["commit", "-m", message], { cwd });
-  await run("git", ["push", "origin", "HEAD"], { cwd });
+  await pushWithToken(cwd);
   const { stdout: sha } = await run("git", ["rev-parse", "HEAD"], { cwd });
   return { committed: true, sha: sha.trim() };
 }
