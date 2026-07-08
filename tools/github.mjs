@@ -116,6 +116,10 @@ export async function fetchFailureLogs({ cwd, runId }) {
 export function extractCompilerErrors(logText) {
   return logText
     .split("\n")
-    .filter((line) => /error CS\d+|Compilation failed/.test(line))
+    // Real compiler diagnostics look like "Assets/Foo.cs(12,3): error CS1002: ..." or
+    // "Compilation failed: N error(s)". Exclude the workflow step's own echoed command
+    // (it literally contains the strings "error CS" / "Compilation failed" as a grep pattern).
+    .filter((line) => /error CS\d+\s*:/.test(line) || /^\s*Compilation failed\b/i.test(line))
+    .filter((line) => !line.includes("GITHUB_STEP_SUMMARY") && !line.includes("grep -h -E"))
     .map((line) => line.trim());
 }
