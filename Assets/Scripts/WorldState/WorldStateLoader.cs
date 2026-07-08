@@ -90,6 +90,13 @@ namespace CityBuilder.WorldState
 
                 _liveObjects[obj.id] = go;
             }
+            else if (go.transform.parent != parent)
+            {
+                // world_state.json is the single source of truth: if an object's
+                // parent changed there (e.g. moved to a different building), the
+                // live scene must follow rather than keeping its old hierarchy.
+                go.transform.SetParent(parent, false);
+            }
 
             go.transform.localPosition = new Vector3(obj.position.x, obj.position.y, obj.position.z);
             go.transform.localScale = new Vector3(obj.scale.x, obj.scale.y, obj.scale.z);

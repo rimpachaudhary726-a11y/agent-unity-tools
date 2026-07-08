@@ -62,9 +62,11 @@ async function main() {
     console.log(`\n=== Attempt ${attempt}/${MAX_RETRIES}: "${command}" ===`);
 
     const doc = await loadWorldState();
-    const { agent, result } = routeCommand(doc, command, { compilerFeedback });
-    console.log(`Orchestrator -> ${agent} agent`);
-    console.log(result.summary);
+    const { agent, result, steps } = routeCommand(doc, command, { compilerFeedback });
+    for (const step of steps) {
+      console.log(`Orchestrator -> ${step.agent} agent ("${step.clause}")`);
+      console.log(step.result.summary);
+    }
 
     try {
       await runStructuralChecks({ worldState: doc });
